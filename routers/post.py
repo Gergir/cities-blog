@@ -1,9 +1,12 @@
+import shutil
+import string
 from typing import Annotated
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from models.post import Post, PostRequest, PostResponse
 from services.db_service import get_db
-
+import string
+import random
 
 router = APIRouter(prefix="/post", tags=["post"])
 
@@ -30,6 +33,18 @@ def create_post(post: Annotated[PostRequest, Body()], db: Session = Depends(get_
     db.refresh(db_post)
     return db_post
 
+@router.post("/new/image")
+def upload_image(image: UploadFile = File(...)):
+    letter = string.ascii_letters
+    rand_str = ''.join(random.choice(letter) for i in range(6))
+    new = f"_{rand_str}."
+    filename = new.join(image.filename.rsplit('.', 1))
+    path = f"images/{filename}"
+
+    with open(path, "w+b") as buffer:
+        shutil.copyfileobj(image.file, buffer)
+
+    return {"filename": path}
 
 @router.patch("/update/{post_id}", response_model=PostResponse)
 def update_post(post_id: int, post: Annotated[PostRequest, Body()], db: Session = Depends(get_db)):
